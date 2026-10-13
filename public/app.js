@@ -7,6 +7,7 @@
   const HISTORY_KEY = "veil.history.v1";
   const SAVED_KEY = "veil.saved.v1";
   const SHORTCUTS_KEY = "veil.shortcuts.v1";
+  const PROXY_SESSION_KEY = "veil.proxy-session.v1";
   const $ = (selector) => document.querySelector(selector);
   const $$ = (selector) => [...document.querySelectorAll(selector)];
   const homeView = $("#homeView");
@@ -17,6 +18,7 @@
   const proxyFrame = $("#proxyFrame");
   const frameLoading = $("#frameLoading");
   const toast = $("#toast");
+  let proxySessionId = readProxySessionId();
   let currentUrl = "";
   let toastTimer;
   let loadingTimer;
@@ -29,6 +31,21 @@
       return Array.isArray(value) ? value : fallback;
     } catch {
       return fallback;
+    }
+  }
+
+  function readProxySessionId() {
+    try {
+      let id = localStorage.getItem(PROXY_SESSION_KEY);
+      if (!/^[a-f0-9]{64}$/i.test(id || "")) {
+        const bytes = crypto.getRandomValues(new Uint8Array(32));
+        id = [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+        localStorage.setItem(PROXY_SESSION_KEY, id);
+      }
+      return id;
+    } catch (error) {
+      console.error("Could not initialize the private proxy cookie session:", error);
+      return "";
     }
   }
 
@@ -81,7 +98,9 @@
   }
 
   function proxyUrl(value) {
-    return `${PROXY_ORIGIN}/proxy?url=${encodeURIComponent(value)}`;
+    const query = new URLSearchParams({ url: value });
+    if (proxySessionId) query.set("session", proxySessionId);
+    return `${PROXY_ORIGIN}/proxy?${query}`;
   }
 
   function navigate(raw) {

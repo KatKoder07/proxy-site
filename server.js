@@ -4,12 +4,19 @@ const dns = require("node:dns").promises;
 const net = require("node:net");
 const fs = require("node:fs");
 const path = require("node:path");
+const {
+  getDocumentCookieString,
+  getRequestCookieHeader,
+  storeDocumentCookie,
+  storeResponseCookies,
+} = require("./cookie-jar.cjs");
 
 const APP_HOST = process.env.HOST || "127.0.0.1";
 const APP_PORT = Number(process.env.PORT || 4173);
 const PROXY_ONLY = process.env.PROXY_ONLY === "true";
 const PROXY_PORT = Number(process.env.PROXY_PORT || (PROXY_ONLY && process.env.PORT ? process.env.PORT : APP_PORT + 1));
 const MAX_REQUEST_BYTES = 1024 * 1024;
+const MAX_COOKIE_UPDATE_BYTES = 4096;
 const MAX_RESPONSE_BYTES = 10 * 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 20_000;
 const PUBLIC_DIR = path.join(__dirname, "public");
@@ -131,7 +138,7 @@ function createPinnedLookup(addresses) {
   };
 }
 
-function requestUpstream(target, method, headers, body, redirects = 0) {
+function requestUpstream(target, method, headers, body, sessionId, redirects = 0) {
   return new Promise(async (resolve, reject) => {
     let addresses;
     try {
@@ -148,6 +155,8 @@ function requestUpstream(target, method, headers, body, redirects = 0) {
       "accept-language": headers["accept-language"] || "en-US,en;q=0.8",
       host: target.host,
     };
+    const cookieHeader = getRequestCookieHeader(sessionId, target.href);
+    if (cookieHeader) outgoingHeaders.cookie = cookieHeader;
     for (const name of ["range", "if-range"]) {
       if (headers[name]) outgoingHeaders[name] = headers[name];
     }
@@ -168,6 +177,7 @@ function requestUpstream(target, method, headers, body, redirects = 0) {
       async (incoming) => {
         const status = incoming.statusCode || 502;
         const location = incoming.headers.location;
+        storeResponseCookies(sessionId, target.href, incoming.headers["set-cookie"]);
         if ([301, 302, 303, 307, 308].includes(status) && location) {
           incoming.resume();
           if (redirects >= 5) {
@@ -179,7 +189,7 @@ function requestUpstream(target, method, headers, body, redirects = 0) {
             const nextMethod = status === 303 || ((status === 301 || status === 302) && method === "POST")
               ? "GET"
               : method;
-            resolve(requestUpstream(nextTarget, nextMethod, headers, nextMethod === "GET" ? Buffer.alloc(0) : body, redirects + 1));
+            resolve(requestUpstream(nextTarget, nextMethod, headers, nextMethod === "GET" ? Buffer.alloc(0) : body, sessionId, redirects + 1));
           } catch (error) {
             reject(error);
           }
@@ -229,29 +239,35 @@ function decodeHtmlAttribute(value) {
     });
 }
 
-function proxiedUrl(value, sourceUrl, proxyOrigin) {
+function proxyUrl(targetUrl, proxyOrigin, sessionId) {
+  const query = new URLSearchParams({ url: targetUrl });
+  if (sessionId) query.set("session", sessionId);
+  return `${proxyOrigin}/proxy?${query}`;
+}
+
+function proxiedUrl(value, sourceUrl, proxyOrigin, sessionId) {
   const raw = decodeHtmlAttribute(value.trim());
   if (!raw || /^(?:#|data:|blob:|javascript:|mailto:|tel:)/i.test(raw)) return value;
   try {
     const absolute = new URL(raw, sourceUrl);
     if (!["http:", "https:"].includes(absolute.protocol)) return value;
-    return `${proxyOrigin}/proxy?url=${encodeURIComponent(absolute.href)}`;
+    return proxyUrl(absolute.href, proxyOrigin, sessionId);
   } catch {
     return value;
   }
 }
 
-function rewriteSrcset(value, sourceUrl, proxyOrigin) {
+function rewriteSrcset(value, sourceUrl, proxyOrigin, sessionId) {
   return value.split(",").map((candidate) => {
     const parts = candidate.trim().split(/\s+/);
     if (!parts[0] || /^data:/i.test(parts[0])) return candidate;
-    parts[0] = proxiedUrl(parts[0], sourceUrl, proxyOrigin);
+    parts[0] = proxiedUrl(parts[0], sourceUrl, proxyOrigin, sessionId);
     return parts.join(" ");
   }).join(", ");
 }
 
-function rewriteCss(css, sourceUrl, proxyOrigin) {
-  const route = (raw) => proxiedUrl(raw, sourceUrl, proxyOrigin);
+function rewriteCss(css, sourceUrl, proxyOrigin, sessionId) {
+  const route = (raw) => proxiedUrl(raw, sourceUrl, proxyOrigin, sessionId);
   return css.replace(
     /@import\s+(?:url\(\s*)?(['"])(.*?)\1\s*\)?|url\(\s*(['"]?)(.*?)\3\s*\)/gi,
     (whole, _importQuote, importValue, _urlQuote, urlValue) =>
@@ -261,7 +277,7 @@ function rewriteCss(css, sourceUrl, proxyOrigin) {
   );
 }
 
-function rewriteHtml(html, sourceUrl, proxyOrigin) {
+function rewriteHtml(html, sourceUrl, proxyOrigin, sessionId) {
   const urlAttributes = new Set(["href", "src", "action", "poster", "data", "xlink:href"]);
   const rewritten = html.replace(/<([a-z][\w:-]*)(\s[^<>]*?)?>/gi, (tagText, _tag, attributes = "") => {
     const next = attributes.replace(
@@ -270,22 +286,22 @@ function rewriteHtml(html, sourceUrl, proxyOrigin) {
         const name = prefix.trim().split("=")[0].trim().toLowerCase();
         const value = doubleQuoted ?? singleQuoted ?? unquoted ?? "";
         let nextValue = value;
-        if (urlAttributes.has(name)) nextValue = proxiedUrl(value, sourceUrl, proxyOrigin);
-        if (name === "srcset") nextValue = rewriteSrcset(value, sourceUrl, proxyOrigin);
-        if (name === "style") nextValue = rewriteCss(value, sourceUrl, proxyOrigin);
+        if (urlAttributes.has(name)) nextValue = proxiedUrl(value, sourceUrl, proxyOrigin, sessionId);
+        if (name === "srcset") nextValue = rewriteSrcset(value, sourceUrl, proxyOrigin, sessionId);
+        if (name === "style") nextValue = rewriteCss(value, sourceUrl, proxyOrigin, sessionId);
         return `${prefix}"${nextValue.replace(/"/g, "&quot;")}"`;
       },
     );
     return `<${_tag}${next}>`;
   });
   const withCss = rewritten.replace(/(<style\b[^>]*>)([\s\S]*?)(<\/style\s*>)/gi, (_whole, open, css, close) =>
-    `${open}${rewriteCss(css, sourceUrl, proxyOrigin)}${close}`);
+    `${open}${rewriteCss(css, sourceUrl, proxyOrigin, sessionId)}${close}`);
 
   const scriptValue = (value) => JSON.stringify(value)
     .replace(/</g, "\\u003c")
     .replace(/>/g, "\\u003e")
     .replace(/&/g, "\\u0026");
-  const runtime = `<script>(${proxyRuntime.toString()})(${scriptValue(sourceUrl)},${scriptValue(proxyOrigin)});</script>`;
+  const runtime = `<script>(${proxyRuntime.toString()})(${scriptValue(sourceUrl)},${scriptValue(proxyOrigin)},${scriptValue(sessionId)},${scriptValue(getDocumentCookieString(sessionId, sourceUrl))});</script>`;
   const headIndex = withCss.search(/<head(?:\s[^>]*)?>/i);
   if (headIndex >= 0) {
     const end = withCss.indexOf(">", headIndex) + 1;
@@ -294,7 +310,7 @@ function rewriteHtml(html, sourceUrl, proxyOrigin) {
   return `${runtime}${withCss}`;
 }
 
-function proxyRuntime(sourceUrl, proxyOrigin) {
+function proxyRuntime(sourceUrl, proxyOrigin, sessionId, initialCookies) {
   const notify = (input) => {
     try {
       const candidate = new URL(String(input), sourceUrl);
@@ -312,7 +328,9 @@ function proxyRuntime(sourceUrl, proxyOrigin) {
     try {
       const url = new URL(String(input), sourceUrl);
       if (!["http:", "https:"].includes(url.protocol)) return input;
-      return `${proxyOrigin}/proxy?url=${encodeURIComponent(url.href)}`;
+      const query = new URLSearchParams({ url: url.href });
+      if (sessionId) query.set("session", sessionId);
+      return `${proxyOrigin}/proxy?${query}`;
     } catch {
       return input;
     }
@@ -330,6 +348,40 @@ function proxyRuntime(sourceUrl, proxyOrigin) {
   XMLHttpRequest.prototype.open = function (method, url, ...rest) {
     return originalOpen.call(this, method, route(url), ...rest);
   };
+
+  const documentCookie = { value: initialCookies };
+  Object.defineProperty(document, "cookie", {
+    configurable: true,
+    enumerable: true,
+    get: () => documentCookie.value,
+    set: (value) => {
+      const cookie = String(value).split(";", 1)[0].trim();
+      const separator = cookie.indexOf("=");
+      if (separator <= 0) return;
+      const name = cookie.slice(0, separator).trim();
+      const nextValue = cookie.slice(separator + 1).trim();
+      const entries = new Map(documentCookie.value.split(/;\s*/).filter(Boolean).map((entry) => {
+        const index = entry.indexOf("=");
+        return [entry.slice(0, index), entry.slice(index + 1)];
+      }));
+      const expired = /(?:^|;)\s*max-age\s*=\s*(?:0|-\d+)/i.test(String(value)) ||
+        (() => {
+          const expires = String(value).match(/(?:^|;)\s*expires\s*=\s*([^;]+)/i);
+          return expires ? Date.parse(expires[1]) <= Date.now() : false;
+        })();
+      if (expired) entries.delete(name);
+      else entries.set(name, nextValue);
+      documentCookie.value = [...entries].map(([key, entry]) => `${key}=${entry}`).join("; ");
+      originalFetch(`${proxyOrigin}/cookies?session=${encodeURIComponent(sessionId)}&url=${encodeURIComponent(sourceUrl)}`, {
+        method: "POST",
+        headers: { "content-type": "text/plain" },
+        body: String(value),
+        keepalive: true,
+      }).then((response) => {
+        if (!response.ok) console.error("Veil could not save this site's cookie.");
+      }).catch((error) => console.error("Veil could not save this site's cookie:", error));
+    },
+  });
 
   document.addEventListener("click", (event) => {
     if (!(event.target instanceof Element)) return;
@@ -449,6 +501,7 @@ const proxyServer = http.createServer(async (req, res) => {
       return;
     }
     const incomingUrl = new URL(req.url, proxyOrigin);
+    let sessionId = incomingUrl.searchParams.get("session") || "";
     if (incomingUrl.pathname === "/health" && req.method === "GET") {
       res.writeHead(200, {
         "content-type": "application/json",
@@ -457,11 +510,33 @@ const proxyServer = http.createServer(async (req, res) => {
       res.end(JSON.stringify({ status: "ok", proxy: proxyOrigin }));
       return;
     }
+    if (incomingUrl.pathname === "/cookies") {
+      if (req.method !== "POST" || !sessionId) {
+        proxyError(res, 400, "A browser session is required to update cookies.");
+        return;
+      }
+      const pageUrl = incomingUrl.searchParams.get("url");
+      if (!pageUrl) {
+        proxyError(res, 400, "A page URL is required to update cookies.");
+        return;
+      }
+      await validateTarget(pageUrl);
+      const cookie = await readBody(req);
+      if (cookie.length > MAX_COOKIE_UPDATE_BYTES) {
+        proxyError(res, 413, "The cookie exceeded the 4 KB limit.");
+        return;
+      }
+      storeDocumentCookie(sessionId, pageUrl, cookie.toString("utf8"));
+      res.writeHead(204, { "cache-control": "no-store" });
+      res.end();
+      return;
+    }
     let targetValue = incomingUrl.searchParams.get("url");
 
     if (!targetValue && req.headers.referer) {
       const referer = new URL(req.headers.referer);
       const refererTarget = new URL(referer.searchParams.get("url") || "");
+      if (!sessionId) sessionId = referer.searchParams.get("session") || "";
       targetValue = new URL(incomingUrl.pathname + incomingUrl.search, refererTarget).href;
     }
     if (!targetValue) {
@@ -475,13 +550,13 @@ const proxyServer = http.createServer(async (req, res) => {
 
     const target = await validateTarget(targetValue);
     const body = req.method === "POST" ? await readBody(req) : Buffer.alloc(0);
-    const result = await requestUpstream(target, req.method, req.headers, body);
+    const result = await requestUpstream(target, req.method, req.headers, body, sessionId);
     const contentType = String(result.headers["content-type"] || "application/octet-stream");
     let responseBody = result.body;
     if (/text\/html/i.test(contentType)) {
-      responseBody = Buffer.from(rewriteHtml(responseBody.toString("utf8"), target.href, proxyOrigin));
+      responseBody = Buffer.from(rewriteHtml(responseBody.toString("utf8"), target.href, proxyOrigin, sessionId));
     } else if (/text\/css/i.test(contentType)) {
-      responseBody = Buffer.from(rewriteCss(responseBody.toString("utf8"), target.href, proxyOrigin));
+      responseBody = Buffer.from(rewriteCss(responseBody.toString("utf8"), target.href, proxyOrigin, sessionId));
     }
 
     const responseHeaders = {

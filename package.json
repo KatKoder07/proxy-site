@@ -4,7 +4,8 @@
   "private": true,
   "description": "A modern, locally hosted web proxy browser.",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test test/cookie-jar.test.cjs"
   },
   "engines": {
     "node": ">=20"
