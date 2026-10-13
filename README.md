@@ -25,7 +25,7 @@ In the backend host's environment settings, set `ALLOWED_ORIGINS` to the Pages o
 ## What it does
 
 - Opens HTTP and HTTPS pages in a sandboxed browser frame.
-- Rewrites common links, images, stylesheets, and form destinations through the local proxy.
+- Rewrites common links, images, stylesheets, and form destinations through the configured proxy.
 - Offers URL entry, DuckDuckGo search, shortcuts, local history, and saved pages.
 - Keeps history and saved pages in this browser's local storage.
 - Rejects private/reserved IP destinations, credentials in URLs, and non-standard destination ports; pins validated DNS results when connecting.
@@ -33,6 +33,6 @@ In the backend host's environment settings, set `ALLOWED_ORIGINS` to the Pages o
 
 ## Limitations and privacy
 
-This is a local browsing convenience, not an anonymity service. The remote website can still see your public IP address. HTTPS remains encrypted between this device and the destination; HTTP destinations are not encrypted. The app does not store proxy traffic, forward browser cookies, or forward authorization headers. Pages that depend on sign-in, complex client-side routing, service workers, pop-ups, or anti-embedding checks may not work. Avoid entering sensitive information.
+This is a browsing convenience, not an anonymity service. Remote websites see the proxy server's public IP when using a hosted backend, or your device's public IP when running the proxy locally. The proxy operator can process the traffic; HTTPS is encrypted between the proxy and HTTPS destinations, while HTTP destinations are not encrypted. The app does not store proxy traffic, forward browser cookies, or forward authorization headers. Pages that depend on sign-in, complex client-side routing, service workers, pop-ups, or anti-embedding checks may not work. Avoid entering sensitive information.
 
 The proxy is bound to `127.0.0.1` by default. Do not expose it to the public internet without adding authentication, rate limits, stronger request isolation, and a deployment-specific security review.

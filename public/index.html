@@ -38,7 +38,7 @@
         <div class="sidebar-spacer"></div>
         <div class="connection-card">
           <span class="connection-icon"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg></span>
-          <div><strong>Local proxy only</strong><span>Runs on this device</span></div>
+          <div><strong>Proxy service</strong><span>Configured endpoint</span></div>
           <span class="status-dot" id="sidebarStatus"></span>
         </div>
         <div class="sidebar-footer"><span class="avatar">V</span><span>Local workspace</span><button class="more-button" aria-label="More options">···</button></div>
@@ -48,7 +48,7 @@
         <header class="topbar">
           <button class="mobile-menu" id="mobileMenu" aria-label="Toggle navigation"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
           <div class="breadcrumbs"><span>Workspace</span><span class="crumb-slash">/</span><strong id="breadcrumbPage">Home</strong></div>
-          <div class="top-actions"><span class="system-status"><i id="topStatusDot"></i><span id="connectionStatus">Checking local proxy</span></span><button class="help-button" id="helpButton" aria-label="About Veil">?</button></div>
+          <div class="top-actions"><span class="system-status"><i id="topStatusDot"></i><span id="connectionStatus">Checking proxy connection</span></span><button class="help-button" id="helpButton" aria-label="About Veil">?</button></div>
         </header>
 
         <section class="home-view view active" id="homeView">
@@ -70,7 +70,7 @@
             <form class="search-form" id="searchForm">
               <span class="search-icon"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.3 4.3"/></svg></span>
               <input id="addressInput" type="text" autocomplete="url" spellcheck="false" placeholder="Paste a URL or search the web..." aria-label="Enter a URL or search term">
-              <span class="secure-label"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> LOCAL PROXY</span>
+              <span class="secure-label"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> VEIL PROXY</span>
               <button class="go-button" type="submit">Go <span>↗</span></button>
             </form>
             <div class="search-bottom"><span><kbd>↵</kbd> to navigate</span><span class="search-note">Search powered by DuckDuckGo</span></div>
@@ -91,12 +91,12 @@
             <section class="panel privacy-panel"><div class="privacy-heading"><span class="privacy-badge"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg></span><div><h3>Your privacy, at a glance</h3><p>Built for a lighter footprint</p></div></div><div class="privacy-items"><div><span class="privacy-check">✓</span><span><strong>No account needed</strong><small>Just open and browse</small></span></div><div><span class="privacy-check">✓</span><span><strong>Local by default</strong><small>History stays in this browser</small></span></div><div><span class="privacy-check">✓</span><span><strong>Safer connections</strong><small>Private network targets blocked</small></span></div></div><button class="privacy-link" id="privacyDetails">How this works <span>→</span></button></section>
           </div>
 
-          <footer class="page-footer"><span>Made for a more open web <span class="footer-heart">✳</span></span><span>Veil v1.0 <i></i> Local-only proxy</span></footer>
+          <footer class="page-footer"><span>Made for a more open web <span class="footer-heart">✳</span></span><span>Veil v1.0 <i></i> Proxy-backed browsing</span></footer>
         </section>
 
         <section class="browser-view view" id="browserView">
           <div class="browser-toolbar"><button class="back-button" id="backHome" aria-label="Back to home">←</button><button class="refresh-button" id="refreshPage" aria-label="Refresh page">↻</button><form id="browserForm" class="browser-address"><span class="mini-lock">◇</span><input id="browserAddress" type="text" spellcheck="false" aria-label="Current web address"><button type="submit" aria-label="Go to address">↵</button></form><button class="save-page-button" id="savePage" title="Save page" aria-label="Save this page">☆</button><button class="expand-page" id="expandPage" title="Open page in a new tab" aria-label="Open page in a new tab">↗</button></div>
-          <div class="browser-frame-wrap"><iframe id="proxyFrame" title="Proxied web page" sandbox="allow-forms allow-scripts allow-downloads allow-modals allow-pointer-lock allow-presentation" referrerpolicy="same-origin"></iframe><div class="frame-loading" id="frameLoading"><span class="loading-ring"></span><strong>Opening your page</strong><span>Connecting through your local proxy…</span></div></div>
+          <div class="browser-frame-wrap"><iframe id="proxyFrame" title="Proxied web page" sandbox="allow-forms allow-scripts allow-downloads allow-modals allow-pointer-lock allow-presentation" referrerpolicy="same-origin"></iframe><div class="frame-loading" id="frameLoading"><span class="loading-ring"></span><strong>Opening your page</strong><span>Connecting through the configured proxy…</span></div></div>
         </section>
 
         <section class="collection-view view" id="collectionView">
@@ -107,7 +107,7 @@
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <dialog class="info-dialog" id="infoDialog"><form method="dialog"><button class="dialog-close" aria-label="Close">×</button><span class="dialog-mark"><svg viewBox="0 0 36 36"><path d="M4 18C7.5 10.5 12 7 18 7s10.5 3.5 14 11c-3.5 7.5-8 11-14 11S7.5 25.5 4 18Z"/><circle cx="18" cy="18" r="5"/></svg></span><span class="eyebrow"><span class="eyebrow-mark"></span> A NOTE ON PRIVACY</span><h2>Browsing, with a little more care.</h2><p>Veil runs on your device and routes pages through a local proxy. It blocks private-network destinations and limits request size. It does not provide anonymity: websites can still identify your connection, and this app does not encrypt traffic beyond the destination’s own HTTPS.</p><p>Some websites may not work correctly because they block embedded browsing or rely on features this lightweight proxy does not support.</p><button class="dialog-done" value="close">Got it</button></form></dialog>
+    <dialog class="info-dialog" id="infoDialog"><form method="dialog"><button class="dialog-close" aria-label="Close">×</button><span class="dialog-mark"><svg viewBox="0 0 36 36"><path d="M4 18C7.5 10.5 12 7 18 7s10.5 3.5 14 11c-3.5 7.5-8 11-14 11S7.5 25.5 4 18Z"/><circle cx="18" cy="18" r="5"/></svg></span><span class="eyebrow"><span class="eyebrow-mark"></span> A NOTE ON PRIVACY</span><h2>Browsing, with a little more care.</h2><p>Veil routes pages through the configured proxy and blocks private-network destinations. It does not provide anonymity: websites can identify the proxy server (or your device when running locally). The proxy operator can process the traffic, and HTTP destinations are not encrypted.</p><p>Some websites may not work correctly because they block embedded browsing or rely on features this lightweight proxy does not support. Avoid entering sensitive information.</p><button class="dialog-done" value="close">Got it</button></form></dialog>
     <dialog class="shortcut-dialog" id="shortcutDialog"><form id="shortcutForm"><button type="button" class="dialog-close" id="closeShortcut" aria-label="Close">×</button><span class="eyebrow"><span class="eyebrow-mark"></span> PERSONALIZE YOUR SPACE</span><h2>Add a shortcut</h2><label for="shortcutName">Name</label><input id="shortcutName" required maxlength="32" placeholder="A favorite site"><label for="shortcutUrl">Website URL</label><input id="shortcutUrl" required placeholder="https://example.com"><div class="dialog-actions"><button type="button" class="outline-button" id="cancelShortcut">Cancel</button><button type="submit" class="dialog-done">Add shortcut</button></div></form></dialog>
   </body>
 </html>

@@ -260,7 +260,7 @@
   $("#proxyFrame").addEventListener("error", () => {
     clearTimeout(loadingTimer);
     frameLoading.classList.add("hidden");
-    toastMessage("This page could not be loaded through the local proxy.");
+    toastMessage("This page could not be loaded through the configured proxy.");
   });
   window.addEventListener("message", (event) => {
     if (event.source !== proxyFrame.contentWindow || event.data?.type !== "veil:navigate") return;
