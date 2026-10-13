@@ -1,0 +1,12 @@
+{
+  "name": "veil-browser",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A modern, locally hosted web proxy browser.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

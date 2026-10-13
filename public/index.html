@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#111318">
+    <meta name="description" content="A modern, locally hosted private browsing workspace.">
+    <title>Veil — Private browsing, made simple</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script src="./config.js" defer></script>
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar">
+        <a class="brand" href="./" aria-label="Veil home">
+          <span class="brand-mark"><svg viewBox="0 0 36 36" aria-hidden="true"><path d="M4 18C7.5 10.5 12 7 18 7s10.5 3.5 14 11c-3.5 7.5-8 11-14 11S7.5 25.5 4 18Z"/><circle cx="18" cy="18" r="5"/></svg></span>
+          <span class="brand-name">veil<span>.</span></span>
+        </a>
+
+        <button class="new-session" id="newSession"><span class="plus-icon">+</span> New session <kbd>⌘ K</kbd></button>
+
+        <div class="nav-label">WORKSPACE</div>
+        <nav class="main-nav" aria-label="Main navigation">
+          <button class="nav-item active" data-view="home"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1z"/></svg>Home</button>
+          <button class="nav-item" data-view="history"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 2.64-6.36L3 8"/><path d="M3 3v5h5m4-1v5l3 2"/></svg>History</button>
+          <button class="nav-item" data-view="saved"><svg viewBox="0 0 24 24"><path d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V21l-6-4-6 4z"/></svg>Saved pages</button>
+        </nav>
+
+        <div class="sidebar-divider"></div>
+        <div class="nav-label">YOUR SHORTCUTS <button class="tiny-add" id="addShortcut" aria-label="Add shortcut">+</button></div>
+        <nav class="shortcut-list" id="shortcutList" aria-label="Shortcuts">
+          <button class="shortcut-item" data-url="https://www.wikipedia.org"><span class="shortcut-icon icon-wiki">W</span>Wikipedia</button>
+          <button class="shortcut-item" data-url="https://www.reddit.com"><span class="shortcut-icon icon-reddit">r</span>Reddit</button>
+          <button class="shortcut-item" data-url="https://news.ycombinator.com"><span class="shortcut-icon icon-hn">Y</span>Hacker News</button>
+        </nav>
+
+        <div class="sidebar-spacer"></div>
+        <div class="connection-card">
+          <span class="connection-icon"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg></span>
+          <div><strong>Local proxy only</strong><span>Runs on this device</span></div>
+          <span class="status-dot" id="sidebarStatus"></span>
+        </div>
+        <div class="sidebar-footer"><span class="avatar">V</span><span>Local workspace</span><button class="more-button" aria-label="More options">···</button></div>
+      </aside>
+
+      <main class="main-area">
+        <header class="topbar">
+          <button class="mobile-menu" id="mobileMenu" aria-label="Toggle navigation"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+          <div class="breadcrumbs"><span>Workspace</span><span class="crumb-slash">/</span><strong id="breadcrumbPage">Home</strong></div>
+          <div class="top-actions"><span class="system-status"><i id="topStatusDot"></i><span id="connectionStatus">Checking local proxy</span></span><button class="help-button" id="helpButton" aria-label="About Veil">?</button></div>
+        </header>
+
+        <section class="home-view view active" id="homeView">
+          <div class="hero">
+            <div class="hero-copy">
+              <div class="eyebrow"><span class="eyebrow-mark"></span> YOUR WINDOW TO THE WEB</div>
+              <h1>A little more<br><span>room to browse.</span></h1>
+              <p>A calmer, more private way to explore the web. Enter a link or search for something to get started.</p>
+            </div>
+            <div class="hero-art" aria-hidden="true">
+              <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+              <div class="art-spark spark-a"></div><div class="art-spark spark-b"></div>
+              <div class="glass-card"><div class="glass-shine"></div><svg viewBox="0 0 92 92"><path d="M46 13 23 23v17c0 17 9.5 32.5 23 38 13.5-5.5 23-21 23-38V23z"/><path d="M35 45c3-6.2 6.7-9.3 11-9.3S54 38.8 57 45c-3 6.2-6.7 9.3-11 9.3S38 51.2 35 45Z"/><circle cx="46" cy="45" r="3"/></svg></div>
+              <div class="orbit-label">YOUR WEB<br>YOUR WAY</div>
+            </div>
+          </div>
+
+          <div class="search-card">
+            <form class="search-form" id="searchForm">
+              <span class="search-icon"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.3 4.3"/></svg></span>
+              <input id="addressInput" type="text" autocomplete="url" spellcheck="false" placeholder="Paste a URL or search the web..." aria-label="Enter a URL or search term">
+              <span class="secure-label"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> LOCAL PROXY</span>
+              <button class="go-button" type="submit">Go <span>↗</span></button>
+            </form>
+            <div class="search-bottom"><span><kbd>↵</kbd> to navigate</span><span class="search-note">Search powered by DuckDuckGo</span></div>
+          </div>
+
+          <div class="quick-section">
+            <div class="section-heading"><div><h2>Pick up where you left off</h2><p>Your go-to corners of the internet</p></div><button class="text-button" data-open-view="history">View history <span>→</span></button></div>
+            <div class="quick-grid" id="quickGrid">
+              <button class="quick-card" data-url="https://www.wikipedia.org"><span class="quick-visual wiki-visual">W</span><span class="quick-meta"><strong>Wikipedia</strong><small>Knowledge for everyone</small></span><span class="open-arrow">↗</span></button>
+              <button class="quick-card" data-url="https://www.reddit.com"><span class="quick-visual reddit-visual"><svg viewBox="0 0 32 32"><path d="M26 16.5a3.4 3.4 0 0 0-5.8-2.4 11.9 11.9 0 0 0-4.7-1.3l1-4.5 3.1.7a2.4 2.4 0 1 0 .3-1.4l-4-.9a.8.8 0 0 0-.9.6l-1.2 5.5a12 12 0 0 0-4.9 1.3 3.4 3.4 0 1 0-3.8 5.5v.8c0 3.6 4.5 6.5 10 6.5s10-2.9 10-6.5v-.8a3.4 3.4 0 0 0 .9-3.1ZM10 20a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm8.5 4a7.4 7.4 0 0 1-5 0 .7.7 0 0 1 .5-1.3 6 6 0 0 0 4 0 .7.7 0 0 1 .5 1.3Zm1.5-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Z"/></svg></span><span class="quick-meta"><strong>Reddit</strong><small>Find your people</small></span><span class="open-arrow">↗</span></button>
+              <button class="quick-card" data-url="https://news.ycombinator.com"><span class="quick-visual hacker-visual">Y</span><span class="quick-meta"><strong>Hacker News</strong><small>Tech, startups &amp; ideas</small></span><span class="open-arrow">↗</span></button>
+              <button class="quick-card" data-url="https://www.bbc.com/news"><span class="quick-visual bbc-visual">BBC</span><span class="quick-meta"><strong>BBC News</strong><small>News from around the world</small></span><span class="open-arrow">↗</span></button>
+            </div>
+          </div>
+
+          <div class="bottom-panels">
+            <section class="panel recent-panel"><div class="panel-heading"><div><span class="panel-icon history-panel-icon"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 2.64-6.36L3 8"/><path d="M3 3v5h5m4-1v5l3 2"/></svg></span><div><h3>Recently visited</h3><p>Your recent browsing, saved locally</p></div></div><button class="icon-button" data-open-view="history" aria-label="See all history">↗</button></div><div class="recent-list" id="recentList"><div class="empty-state"><span>◷</span><p>Your recent pages will show up here.</p></div></div></section>
+            <section class="panel privacy-panel"><div class="privacy-heading"><span class="privacy-badge"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg></span><div><h3>Your privacy, at a glance</h3><p>Built for a lighter footprint</p></div></div><div class="privacy-items"><div><span class="privacy-check">✓</span><span><strong>No account needed</strong><small>Just open and browse</small></span></div><div><span class="privacy-check">✓</span><span><strong>Local by default</strong><small>History stays in this browser</small></span></div><div><span class="privacy-check">✓</span><span><strong>Safer connections</strong><small>Private network targets blocked</small></span></div></div><button class="privacy-link" id="privacyDetails">How this works <span>→</span></button></section>
+          </div>
+
+          <footer class="page-footer"><span>Made for a more open web <span class="footer-heart">✳</span></span><span>Veil v1.0 <i></i> Local-only proxy</span></footer>
+        </section>
+
+        <section class="browser-view view" id="browserView">
+          <div class="browser-toolbar"><button class="back-button" id="backHome" aria-label="Back to home">←</button><button class="refresh-button" id="refreshPage" aria-label="Refresh page">↻</button><form id="browserForm" class="browser-address"><span class="mini-lock">◇</span><input id="browserAddress" type="text" spellcheck="false" aria-label="Current web address"><button type="submit" aria-label="Go to address">↵</button></form><button class="save-page-button" id="savePage" title="Save page" aria-label="Save this page">☆</button><button class="expand-page" id="expandPage" title="Open page in a new tab" aria-label="Open page in a new tab">↗</button></div>
+          <div class="browser-frame-wrap"><iframe id="proxyFrame" title="Proxied web page" sandbox="allow-forms allow-scripts allow-downloads allow-modals allow-pointer-lock allow-presentation" referrerpolicy="same-origin"></iframe><div class="frame-loading" id="frameLoading"><span class="loading-ring"></span><strong>Opening your page</strong><span>Connecting through your local proxy…</span></div></div>
+        </section>
+
+        <section class="collection-view view" id="collectionView">
+          <div class="collection-header"><span class="eyebrow"><span class="eyebrow-mark"></span> YOUR WORKSPACE</span><h1 id="collectionTitle">History</h1><p id="collectionSubtitle">Pages you’ve visited on this device.</p><div class="collection-actions"><button class="outline-button" id="clearCollection">Clear history</button></div></div>
+          <div class="collection-content" id="collectionContent"></div>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <dialog class="info-dialog" id="infoDialog"><form method="dialog"><button class="dialog-close" aria-label="Close">×</button><span class="dialog-mark"><svg viewBox="0 0 36 36"><path d="M4 18C7.5 10.5 12 7 18 7s10.5 3.5 14 11c-3.5 7.5-8 11-14 11S7.5 25.5 4 18Z"/><circle cx="18" cy="18" r="5"/></svg></span><span class="eyebrow"><span class="eyebrow-mark"></span> A NOTE ON PRIVACY</span><h2>Browsing, with a little more care.</h2><p>Veil runs on your device and routes pages through a local proxy. It blocks private-network destinations and limits request size. It does not provide anonymity: websites can still identify your connection, and this app does not encrypt traffic beyond the destination’s own HTTPS.</p><p>Some websites may not work correctly because they block embedded browsing or rely on features this lightweight proxy does not support.</p><button class="dialog-done" value="close">Got it</button></form></dialog>
+    <dialog class="shortcut-dialog" id="shortcutDialog"><form id="shortcutForm"><button type="button" class="dialog-close" id="closeShortcut" aria-label="Close">×</button><span class="eyebrow"><span class="eyebrow-mark"></span> PERSONALIZE YOUR SPACE</span><h2>Add a shortcut</h2><label for="shortcutName">Name</label><input id="shortcutName" required maxlength="32" placeholder="A favorite site"><label for="shortcutUrl">Website URL</label><input id="shortcutUrl" required placeholder="https://example.com"><div class="dialog-actions"><button type="button" class="outline-button" id="cancelShortcut">Cancel</button><button type="submit" class="dialog-done">Add shortcut</button></div></form></dialog>
+  </body>
+</html>
