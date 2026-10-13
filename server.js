@@ -148,6 +148,9 @@ function requestUpstream(target, method, headers, body, redirects = 0) {
       "accept-language": headers["accept-language"] || "en-US,en;q=0.8",
       host: target.host,
     };
+    for (const name of ["range", "if-range"]) {
+      if (headers[name]) outgoingHeaders[name] = headers[name];
+    }
     if (body.length && headers["content-type"]) {
       outgoingHeaders["content-type"] = headers["content-type"];
       outgoingHeaders["content-length"] = body.length;
@@ -488,6 +491,9 @@ const proxyServer = http.createServer(async (req, res) => {
       "referrer-policy": "same-origin",
       "x-content-type-options": "nosniff",
     };
+    for (const name of ["accept-ranges", "content-range", "content-disposition", "etag", "last-modified"]) {
+      if (result.headers[name]) responseHeaders[name] = result.headers[name];
+    }
     res.writeHead(result.status, responseHeaders);
     if (req.method === "HEAD") res.end();
     else res.end(responseBody);

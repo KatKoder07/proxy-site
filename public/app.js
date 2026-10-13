@@ -288,7 +288,7 @@
   });
   $("#savePage").addEventListener("click", saveCurrentPage);
   $("#expandPage").addEventListener("click", () => {
-    if (currentUrl) window.open(proxyUrl(currentUrl), "_blank", "noopener,noreferrer");
+    if (currentUrl) window.open(currentUrl, "_blank", "noopener,noreferrer");
   });
   $("#newSession").addEventListener("click", () => {
     currentUrl = "";
