@@ -12,6 +12,20 @@ npm start
 
 Open `http://127.0.0.1:4173`. The app serves its interface on port 4173 and the local proxy on port 4174. Both listeners bind to loopback only; set `PORT` and `PROXY_PORT` to change the ports.
 
+## Use the desktop browser for games and interactive sites
+
+The GitHub Pages app uses a reverse proxy and cannot provide a full browser network stack. Use the separate Electron/Chromium app in `desktop` for sites that need browser cookies, WebSockets, WebRTC, or game streaming. It opens sites directly in Chromium and keeps their normal site cookies and storage in a persistent, isolated browser session; it does not send those sites through the hosted Render proxy.
+
+Install Node.js 20 or later, then run:
+
+```sh
+cd desktop
+npm install
+npm start
+```
+
+To build a Windows installer instead, run `npm run dist:win` from `desktop`; the installer is written to `desktop/dist`. A GitHub Actions workflow also builds the installer on Windows after desktop changes; download the `veil-windows-installer` artifact from that workflow's run. The desktop app requires an internet connection and does not bypass network restrictions or guarantee that a site supports Electron.
+
 ## Deploy the interface to GitHub Pages
 
 The GitHub Actions workflow in `.github/workflows/pages.yml` publishes the static files in `public` when changes are pushed to `main`. In the repository settings, enable Pages and select **GitHub Actions** as the build and deployment source.
